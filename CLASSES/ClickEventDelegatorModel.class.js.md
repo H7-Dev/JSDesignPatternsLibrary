@@ -47,44 +47,33 @@ Esta feature depende diretamente da classe `DomReadyComponent.js` para garantir 
 A classe `ClickEventDelegatorModel` oferece uma solução escalável para a gestão de eventos de clique em aplicações web dinâmicas.
 
 
-```javascript
-/**
- * Classe ClickEventDelegatorModel estende DomReadyComponent para proporcionar
- * delegação de eventos de clique em um contêiner especificado. Esta classe permite
- * uma inicialização eficiente e a configuração de eventos de clique em elementos
- * dinamicamente adicionados dentro de um contêiner específico.
- */
+```JS
 class ClickEventDelegatorModel extends DomReadyComponent {
-    /**
-     * Constrói uma instância de ClickEventDelegatorModel com opções de configuração.
-     * @param {Object} options - As opções para configurar a instância.
-     * @param {string} options.containerId - O ID do contêiner DOM onde a delegação de eventos será aplicada.
-     * @param {string} options.botaoSeletor - O seletor CSS dos botões dentro do contêiner para os quais os eventos de clique são delegados.
-     */
     constructor(options) {
         super();
         this.options = options;
+        this.eventConfigured = false; // Flag para verificar se o evento já foi configurado
+        this.delegatedEventHandler = null; // Referência ao manipulador para poder remover mais tarde
     }
 
-    /**
-     * Inicializa a instância, configurando a delegação de eventos após a inicialização bem-sucedida da classe pai.
-     */
     initialize() {
         super.initialize();
 
-        if (!this.initializedSuccessfully) {
-            console.error("A inicialização da classe pai falhou. A instância de ClickEventDelegatorModel não será funcional.");
-            return;
-        }
+        // Aguardar a DOM estar pronta pode ser necessário se a classe pai também estiver esperando
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!this.initializedSuccessfully) {
+                console.error("A inicialização da classe pai falhou. A instância de ClickEventDelegatorModel não será funcional.");
+                return;
+            }
 
-        this.setupDelegatedEvent();
+            // Configura o evento se ainda não estiver configurado
+            if (!this.eventConfigured) {
+                this.setupDelegatedEvent();
+                this.eventConfigured = true;
+            }
+        });
     }
 
-    /**
-     * Configura a delegação de eventos de clique para o contêiner especificado nas opções. Somente cliques nos elementos que correspondem
-     * ao seletor especificado serão considerados. Isso permite a aplicação eficiente de manipuladores de eventos
-     * a elementos possivelmente adicionados dinamicamente ao contêiner.
-     */
     setupDelegatedEvent() {
         const container = document.getElementById(this.options.containerId);
 
@@ -93,26 +82,29 @@ class ClickEventDelegatorModel extends DomReadyComponent {
             return;
         }
 
-        container.addEventListener('click', (e) => {
+        // Remova o evento anterior se já existir
+        if (this.delegatedEventHandler) {
+            container.removeEventListener('click', this.delegatedEventHandler);
+        }
+
+        this.delegatedEventHandler = (e) => {
             const targetButton = e.target.closest(this.options.botaoSeletor);
             if (targetButton) {
                 console.log('Botão Mais clicado:', targetButton);
-                // Implemente aqui a lógica para o que deve acontecer quando o botão é clicado.
+                // Implementação específica do que deve acontecer quando o botão é clicado
             }
-        });
+        };
+
+        container.addEventListener('click', this.delegatedEventHandler);
     }
 
-    /**
-     * Método estático para criar e inicializar uma instância de ClickEventDelegatorModel com as opções fornecidas.
-     * @param {Object} options - As opções para inicializar a classe.
-     * @returns {ClickEventDelegatorModel} - Uma instância da classe ClickEventDelegatorModel.
-     */
     static init(options) {
         const instance = new ClickEventDelegatorModel(options);
         instance.initialize();
         return instance;
     }
 }
+
 ```
 _Como instanciar_
 ```JS
